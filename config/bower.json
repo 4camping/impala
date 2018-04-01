@@ -1,0 +1,36 @@
+{
+  "name": "accomodation",
+  "description": "modern accomodation platform",
+  "main": "bower.json",
+  "moduleType": [],
+  "keywords": [
+    "emailing",
+    "accountig",
+    "accomodation",
+    "reservation systems"
+  ],
+  "authors": [
+    "Lubomir Andrisek"
+  ],
+  "license": "MIT",
+  "homepage": "dopenzionu.sk",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "bootstrap": "3.3.7",
+    "ckeditor": "4.7.0",
+    "eonasdan-bootstrap-datetimepicker": "^4.17.37",
+    "jquery": "^1.9.1",
+    "jquery-ui": "^1.11.4",
+    "react-datetime": "^2.11.0",
+    "moment": "^2.15.2",
+    "font-awesome": "^4.7.0",
+    "cropperjs": "^1.3.2"
+  },
+  "directory": "bower"
+}

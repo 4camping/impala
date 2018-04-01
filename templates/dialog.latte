@@ -1,0 +1,18 @@
+{block dialog}
+    <a id='trigger-message' style='display:hidden;' data-target='#{$control->getName()}-message' data-toggle='modal'></a>
+    {foreach $dialogs as $dialog => $score}
+        <div class="modal fade" id="{$control->getName()}-{$dialog}" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true" style="z-index:1099;">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                        <h4 class="modal-title" id="{$control->getName()}-label-{$dialog}">{_"$score"|firstUpper}</h4>
+                    </div>
+                    <div class="modal-body" id="{$control->getName()}-{$dialog}-modal-body">
+                        {include $dialog . '.latte'}
+                    </div>
+                </div>
+            </div>
+        </div>
+    {/foreach}
+{/block}

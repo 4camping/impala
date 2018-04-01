@@ -1,0 +1,6 @@
+{
+  "ContentForm.js": "assets/impala/js/ContentForm.js",
+  "Grid.js": "assets/impala/js/Grid.js",
+  "ImportForm.js": "assets/impala/js/ImportForm.js",
+  "RowForm.js": "assets/impala/js/RowForm.js"
+}
