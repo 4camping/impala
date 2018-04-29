@@ -2,25 +2,43 @@
 
 namespace Impala;
 
-use Nette\Application\UI\ISignalReceiver,
+use Nette\Application\IPresenter,
+    Nette\Application\UI\ISignalReceiver,
     Nette\Application\UI\Control,
     Nette\ComponentModel\IComponent,
+    Nette\Application\Responses\JsonResponse,
     Nette\Http\IRequest,
     Nette\InvalidStateException;
 
 /** @author Lubomir Andrisek */
 class ReactForm extends Control implements IReactFormFactory {
 
+    /** @var string */
+    private $assets;
+    
+    /** @var array */
+    private $compulsory = [];
+    
     /** @var array */
     private $data  = [];
 
+    /** @var string */
+    private $id;
+    
     /** @var string */
     private $jsDir;
 
     /** @var IRequest */
     private $request;
+    
+    /** @var array */
+    private $rules;
+    
+    /** @var string */
+    protected const EMAIL = 'isEmail';
 
-    public function __construct(string $jsDir, IRequest $request) {
+    public function __construct(string $jsDir, ?string $id, IRequest $request) {
+        $this->id = $id;
         $this->jsDir = $jsDir;
         $this->request = $request;
     }
@@ -43,6 +61,9 @@ class ReactForm extends Control implements IReactFormFactory {
                 foreach($attribute as $overwriteId => $overwrite) {
                     $attributes[$attributeId]['_' . $overwriteId] = $overwrite;
                     unset($attributes[$attributeId][$overwriteId]);
+                }
+                if(isset($attributes['value'])) {
+                    $attributes['value'] = '_' . $attributes['value'];
                 }
             }
         }
@@ -86,6 +107,8 @@ class ReactForm extends Control implements IReactFormFactory {
         foreach($links as $link) {
             if($this instanceof ISignalReceiver && isset($calls['handle' . ucfirst($link)])) {
                 $handlers[$link] = $this->link($link);
+            } else if($this->getParent() instanceof IPresenter && isset($methods['handle' . ucfirst($link)])) {
+                $handlers[$link] = $this->getParent()->link($link . '!');
             } else if($this->getParent() instanceof ISignalReceiver && isset($methods['handle' . ucfirst($link)])) {
                 $handlers[$link] = $this->getParent()->link($link);
             }
@@ -117,9 +140,16 @@ class ReactForm extends Control implements IReactFormFactory {
         $attributes['type'] = 'radio';
         return $this->add($key, $label, __FUNCTION__, 'input', $attributes);
     }
+    
+    public function addRule(string $validator): IReactFormFactory {
+        end($this->data); 
+        $this->rules[key($this->data)] = $validator;
+        return $this;
+    }
 
     public function addSubmit(string $key, string $label, array $attributes = []): IReactFormFactory {
         $attributes['type'] = 'submit';
+        $attributes['onClick'] = isset($attributes['onClick']) ? $attributes['onClick'] : 'submit';
         return $this->add($key, $label, __FUNCTION__, 'input', $attributes);
     }
 
@@ -133,21 +163,21 @@ class ReactForm extends Control implements IReactFormFactory {
     }
 
     public function addTitle(string $key, string $label, array $attributes): IReactFormFactory {
-        return $this->add($key, $label,  __FUNCTION__, 'div', $attributes);
+        return $this->add($key, $label, __FUNCTION__, 'div', $attributes);
     }
 
     public function addText(string $key, string $label, array $attributes = []): IReactFormFactory {
         $attributes['type'] = isset($attributes['type']) ? $attributes['type'] : 'text';
-        return $this->add($key, $label,__FUNCTION__, 'input', $this->class($attributes));
+        return $this->add($key, $label, __FUNCTION__, 'input', $this->class($attributes));
     }
 
     public function addTextArea(string $key, string $label, array $attributes = []): IReactFormFactory {
         $attributes['type'] = 'textarea';
-        return $this->add($key, $label,__FUNCTION__, 'input', $attributes);
+        return $this->add($key, $label, __FUNCTION__, 'input', $attributes);
     }
 
     public function addUpload(string $key, string $label, array $attributes = []): IReactFormFactory {
-        return $this->add($key, $label,__FUNCTION__, 'input', $attributes);
+        return $this->add($key, $label, __FUNCTION__, 'input', $attributes);
     }
 
     private function class(array $attributes): array {
@@ -166,6 +196,21 @@ class ReactForm extends Control implements IReactFormFactory {
     public function getRequest(): IRequest {
         return $this->request;
     }
+    
+    public function handleValidate(): void {
+        $values = json_decode(file_get_contents('php://input'), true);
+        $validators = [];
+        foreach($this->rules as $key => $rule) {
+            if(true == $this->compulsory[$key] && empty($values['row'][$key])) {
+                $validators[$key] = $values['row'][$key];
+            } else if(false == $this->compulsory[$key] && !empty($values['row'][$key]) && false == Validators::$rule($values['row'][$key])) {
+                $validators[$key] = $values['row'][$key];
+            } else if(false == Validators::$rule($values['row'][$key]) && !empty($values['row'][$key])) {
+                $validators[$key] = $values['row'][$key];
+            };
+        }
+        $this->getPresenter()->sendResponse(new JsonResponse($validators));            
+    }
 
     public function isSignalled(): bool {
         return !empty($this->request->getUrl()->getQueryParameter('do'));
@@ -182,7 +227,7 @@ class ReactForm extends Control implements IReactFormFactory {
     }
 
     public function render(...$args): void {
-        $this->template->component = $this->getName();
+        $this->template->component = empty($this->id) ? $this->getName() : $this->id;
         $this->template->data = json_encode(['row' => $this->data, 'validators' => []]);
         $this->template->js = $this->getPresenter()->template->basePath . '/' . $this->jsDir;
         $this->template->links = json_encode($this->addHandlers(['crop', 'delete', 'done', 'export', 'import', 'move', 'prepare', 'put', 'resize', 'run', 'save', 'submit', 'validate']));
@@ -190,6 +235,10 @@ class ReactForm extends Control implements IReactFormFactory {
         $this->template->render();
     }
 
+    public function setRequired(bool $value) {
+        end($this->data); 
+        $this->compulsory[key($this->data)] = $value;
+    }
 }
 
 interface IReactFormFactory {
