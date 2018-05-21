@@ -2,8 +2,8 @@ import Form from './Form.jsx'
 import React, {Component} from 'react'
 import ReactDOM from 'react-dom'
 
-var ROW = 'row'
 var LINKS = {}
+var ROW = 'row'
 
 export default class RowForm extends Form {
     constructor(props){

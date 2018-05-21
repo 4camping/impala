@@ -9,6 +9,7 @@ use Exception,
 final class ImpalaExtension extends CompilerExtension {
 
     private $defaults = ['assets' => 'assets/impala',
+        'css' => 'assets/impala/css',
         'feeds' => 'feeds',
         'format' => ['date' => ['edit' => 'd.m.Y', 'query'=> 'Y-m-d', 'select' => 'GET_FORMAT(DATE,"EUR")'],
                     'time' => ['edit' => 'Y-m-d H:i:s', 'query' => 'Y-m-d', 'select' => 'GET_FORMAT(DATE,"EUR")']],
@@ -47,9 +48,9 @@ final class ImpalaExtension extends CompilerExtension {
         $builder->addDefinition($this->prefix('grid'))
                 ->setFactory('Impala\Grid', [$parameters['appDir'], $manifest['Grid.js'], $parameters['impala']]);
         $builder->addDefinition($this->prefix('filterForm'))
-                ->setFactory('Impala\FilterForm', ['']);
+                ->setFactory('Impala\FilterForm', [$parameters['impala']['css'], '']);
         $builder->addDefinition($this->prefix('importForm'))
-                ->setFactory('Impala\ImportForm', [$manifest['ImportForm.js']]);
+                ->setFactory('Impala\ImportForm', [$parameters['impala']['css'], $manifest['ImportForm.js']]);
         $builder->addDefinition($this->prefix('helpRepository'))
                 ->setFactory('Impala\HelpRepository', [$parameters['impala']['database'], $parameters['impala']['helps']]);
         $builder->addDefinition($this->prefix('keywordsRepository'))
@@ -61,7 +62,7 @@ final class ImpalaExtension extends CompilerExtension {
         $builder->addDefinition($this->prefix('mockService'))
                 ->setFactory('Impala\MockService');
         $builder->addDefinition($this->prefix('rowForm'))
-                ->setFactory('Impala\RowForm', [$manifest['RowForm.js']]);
+                ->setFactory('Impala\RowForm', [$parameters['impala']['css'], $manifest['RowForm.js']]);
         $builder->addDefinition($this->prefix('writeRepository'))
                 ->setFactory('Impala\WriteRepository', [$parameters['impala']['database'], $parameters['impala']['write']]);
     }

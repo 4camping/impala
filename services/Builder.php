@@ -97,8 +97,8 @@ final class Builder implements IBuilder {
     /** @var IPresenter */
     private $presenter;
 
-    /** @var float */
-    private $score = 0.0;
+    /** @var string */
+    private $primary;
 
     /** @var string */
     private $spice;
@@ -239,14 +239,14 @@ final class Builder implements IBuilder {
 
     public function delete(): array {
         $data = $this->getRow();
-        if(empty($this->score)) {
-            throw new InvalidStateException('Score is not set.');
+        if(empty($this->primary)) {
+            throw new InvalidStateException('Primary is not set.');
         }
         if($this->remove instanceof IRemove) {
-            $this->remove->remove($this->score, $data);
+            $this->remove->remove($this->primary, $data);
         } else {
             $this->client->selectCollection($this->config['database'], $this->collection)
-                ->find(['score' => $this->score])
+                ->find(['_id' => $this->primary])
                 ->deleteOne();
         }
         return ['remove' => true];
@@ -504,7 +504,7 @@ final class Builder implements IBuilder {
             } else if($this->getAnnotation($column, 'pri') && null == $value) {
                 unset($row[$column]);
             } else if($this->getAnnotation($column, 'pri')) {
-                $this->score = $value;
+                $this->primary = $value;
                 unset($row[$column]);
             } else if($this->getAnnotation($column, 'unedit')) {
                 unset($row[$column]);
@@ -770,21 +770,21 @@ final class Builder implements IBuilder {
         return $this;
     }
 
-    public function submit(string $submit): array {
+    public function submit(bool $submit): array {
         $row = $this->getRow();
         if(true == $submit && $this->edit instanceof IEdit) {
-            $new = $this->edit->submit($this->score, $this->getPost('row'));
+            $new = $this->edit->submit($this->primary, $this->getPost('row'));
         } else if(false == $submit && $this->update instanceof IUpdate) {
             $new = $this->update->update($this->getPost('id'), $this->getPost('row'));
         }
         if(!isset($this->filters['score'])) {
             throw new InvalidStateException('Score is not set.');
         }
-        $resource = $this->client->selectCollection($this->config['database'], $this->collection);
-        $resource->updateOne($this->filters, ['$set' => $row]);
-        foreach($this->filters as $column => $value) {
-            $row[$column] = $value;
+        if(isset($new['_id'])) {
+            unset($new['_id']);    
         }
+        $resource = $this->client->selectCollection($this->config['database'], $this->collection);
+        $resource->updateOne($this->filters, ['$set' => $new]);            
         if(isset($new)) {
             return $new;
         } else if(null == $resource->findOne($this->filters)) {
@@ -807,7 +807,7 @@ final class Builder implements IBuilder {
             } else if($this->getAnnotation($column, 'required') && empty($value)) {
                 $validators[$column] = ucfirst($this->translatorRepository->translate($column)) . ' ' . $this->translatorRepository->translate('is required.');
             } else if($this->getAnnotation($column, 'uni')) {
-                if($this->client->table($this->collection)->findOne(['score'=> ['$ne'=>$this->score],$column => $value]) instanceof Cursor) {
+                if($this->client->table($this->collection)->findOne(['_id'=> ['$ne'=>$this->primary],$column => $value]) instanceof Cursor) {
                     $validators[$column] =  ucfirst($this->translatorRepository->translate('unique item'))  . ' ' . $this->translatorRepository->translate($column) . ' ' . $this->translatorRepository->translate('already defined in source table.');
                 }
             } else if($this->getAnnotation($column, 'email') && Validators::isEmail($value)) {
@@ -958,6 +958,7 @@ final class Builder implements IBuilder {
         $score = $this->translatorRepository->getScore($name);
         if (0.0 < $score = $this->translatorRepository->getScore($this->presenter->getName() . ':' . $this->presenter->getAction() . ':' . $name )) {
         } elseif (0.0 < $score = $this->translatorRepository->getScore($this->presenter->getName() . ':' . $name)) {
+        } elseif (0.0 < $score = $this->translatorRepository->getScore($this->collection . '.' . $name)) {    
         } elseif (0.0 < $score = $this->translatorRepository->getScore($name)) {
         }
         $label = $this->translatorRepository->translate($score);

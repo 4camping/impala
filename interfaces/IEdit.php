@@ -12,6 +12,6 @@ interface IEdit {
 
     public function move(array $image, array $row): void;
 
-    public function submit(array $primary, array $response): array;
+    public function submit(string $primary, array $response): array;
 
 }

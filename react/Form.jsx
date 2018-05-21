@@ -3,6 +3,8 @@ import Cropper from 'react-cropper'
 import Datetime from 'react-datetime'
 import {Draggable, Droppable} from 'react-drag-and-drop'
 import Dropzone from 'react-dropzone'
+import {fitBounds} from 'google-map-react/utils'
+import GoogleMap from 'google-map-react'
 import React, {Component} from 'react'
 import request from 'sync-request'
 
@@ -96,6 +98,23 @@ export default class Form extends Component {
             {container}
             <div style={{clear:'both'}}></div>
         </div>
+    }
+    addGoogleMap(key) {
+        var data = this.state[ROW][key].Attributes.value
+        var localizations = {center: {lat: data.Latitude, lng: data.Longitude}, zoom: data.Zoom}
+        return <div  key={'googlemap-' + key} style={{overflow:'hidden',paddingBottom:'56.25%',position:'relative',height:'0'}}>
+            <GoogleMap
+                bootstrapURLKeys={{key: 'AIzaSyCymTfXVgQ62WiN6OZnJpMt6sCtklneRns',libraries: 'places'}}
+                center={localizations.center}
+                zoom={localizations.zoom}
+                yesIWantToUseGoogleMapApiInternals={true}
+                onClick={this.marker.bind(this, key)}
+                style={{left:'0',top:'0',height:'100%',width:'100%',position:'absolute'}}>
+                <div lat={data.Latitude} lng={data.Longitude}>
+                    <div className='pin'></div><div className='pulse'></div>
+                </div>
+            </GoogleMap>
+    </div>
     }
     addHidden(key) {
         return <input key={key} type='hidden' />
@@ -235,7 +254,7 @@ export default class Form extends Component {
             element.Attributes.value = event.target.value
         }
         var state = []
-        state[event.target.id] = element
+        state[ROW][event.target.id] = element
         this.setState(state)
     }
     crop(event) {
@@ -266,26 +285,6 @@ export default class Form extends Component {
         SNAPSHOTS[key][photo].width = event.detail.width
         SNAPSHOTS[key][photo].height = event.detail.height
         SNAPSHOTS[key][photo].y = event.detail.y
-    }
-    image(key, photo) {
-        if(this.state[ROW][key].Attributes.data[photo].size.height == this.state[ROW][key].Attributes.data[photo].crop.height &&
-            this.state[ROW][key].Attributes.data[photo].size.width == this.state[ROW][key].Attributes.data[photo].crop.width) {
-            return <img alt={this.state[ROW][key].Attributes.data[photo].alt}
-                    className='card-img-top'
-                    height={this.state[ROW][key].Attributes.data[photo].height}
-                    id={photo}
-                    name={key}
-                    src={this.state[ROW][key].Attributes.data[photo].src + '?t=' + new Date().getTime()}
-                    width={this.state[ROW][key].Attributes.data[photo].width} />
-        } else {
-            return <Cropper alt={this.state[ROW][key].Attributes.data[photo].alt.toString()}
-                    ref='cropper'
-                    src={this.state[ROW][key].Attributes.data[photo].src + '?t=' + new Date().getTime()}
-                    style={{height:this.state[ROW][key].Attributes.data[photo].height,width:this.state[ROW][key].Attributes.data[photo].width}}
-                    aspectRatio={this.state[ROW][key].Attributes.data[photo].crop.width / this.state[ROW][key].Attributes.data[photo].crop.height}
-                    guides={false}
-                    crop={this.snapshot.bind(null, this, key, photo)} />
-        }
     }
     datetime(key, event) {
         var state = []
@@ -339,6 +338,26 @@ export default class Form extends Component {
         }
         return container
     }
+    image(key, photo) {
+        if(this.state[ROW][key].Attributes.data[photo].size.height == this.state[ROW][key].Attributes.data[photo].crop.height &&
+            this.state[ROW][key].Attributes.data[photo].size.width == this.state[ROW][key].Attributes.data[photo].crop.width) {
+            return <img alt={this.state[ROW][key].Attributes.data[photo].alt}
+                    className='card-img-top'
+                    height={this.state[ROW][key].Attributes.data[photo].height}
+                    id={photo}
+                    name={key}
+                    src={this.state[ROW][key].Attributes.data[photo].src + '?t=' + new Date().getTime()}
+                    width={this.state[ROW][key].Attributes.data[photo].width} />
+        } else {
+            return <Cropper alt={this.state[ROW][key].Attributes.data[photo].alt.toString()}
+                    ref='cropper'
+                    src={this.state[ROW][key].Attributes.data[photo].src + '?t=' + new Date().getTime()}
+                    style={{height:this.state[ROW][key].Attributes.data[photo].height,width:this.state[ROW][key].Attributes.data[photo].width}}
+                    aspectRatio={this.state[ROW][key].Attributes.data[photo].crop.width / this.state[ROW][key].Attributes.data[photo].crop.height}
+                    guides={false}
+                    crop={this.snapshot.bind(null, this, key, photo)} />
+        }
+    }
     load(key, file) {
         var response = JSON.parse(request('POST', LINKS.save, {json:{key:key,row:this.state[ROW]}}).getBody('utf8'))
         request('POST', LINKS.put, {json:{image:this.state[ROW][key].Attributes.type,file:file,name:response.file}})
@@ -346,6 +365,12 @@ export default class Form extends Component {
         var state = []
         state[ROW] = row
         state[ROW][key].Attributes.content++
+        this.setState(state)
+    }
+    marker(key, event) {
+        var state = this.state
+        state[ROW][key].Attributes.value.Latitude = event.lat
+        state[ROW][key].Attributes.value.Longitude = event.lng
         this.setState(state)
     }
     move(to, data) {

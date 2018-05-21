@@ -14,7 +14,7 @@ use Nette\Application\IPresenter,
 class ReactForm extends Control implements IReactFormFactory {
 
     /** @var string */
-    private $assets;
+    private $css;
     
     /** @var array */
     private $compulsory = [];
@@ -26,7 +26,7 @@ class ReactForm extends Control implements IReactFormFactory {
     private $id;
     
     /** @var string */
-    private $jsDir;
+    private $js;
 
     /** @var IRequest */
     private $request;
@@ -37,9 +37,9 @@ class ReactForm extends Control implements IReactFormFactory {
     /** @var string */
     protected const EMAIL = 'isEmail';
 
-    public function __construct(string $jsDir, ?string $id, IRequest $request) {
-        $this->id = $id;
-        $this->jsDir = $jsDir;
+    public function __construct(string $css, string $js, IRequest $request) {
+        $this->css = $css;
+        $this->js = $js;
         $this->request = $request;
     }
 
@@ -85,7 +85,7 @@ class ReactForm extends Control implements IReactFormFactory {
     }
 
     public function addDateTime(string $key, string $label, array $attributes = []): IReactFormFactory {
-        return $this->add($key, $label, 'addDateTime', 'input', $attributes);
+        return $this->add($key, $label, __FUNCTION__, 'input', $attributes);
     }
 
     public function addEmpty(string $key, string $label, array $attributes = []): IReactFormFactory {
@@ -98,6 +98,12 @@ class ReactForm extends Control implements IReactFormFactory {
             throw new InvalidStateException('Name and content attribute intended for delete button and proceed message were not set.');
         }
         return $this->add($key, $label, __FUNCTION__, 'div', $attributes);
+    }
+    
+    public function addGoogleMap(string $key, string $label, array $attributes = []): IReactFormFactory {
+        $attributes['value']['Latitude'] = round($attributes['value']['Latitude'], 2);
+        $attributes['value']['Longitude'] = round($attributes['value']['Longitude'], 2);
+        return $this->add($key, $label, __FUNCTION__, 'input', $attributes);
     }
 
     private function addHandlers(array $links): array {
@@ -227,10 +233,15 @@ class ReactForm extends Control implements IReactFormFactory {
     }
 
     public function render(...$args): void {
-        $this->template->component = empty($this->id) ? $this->getName() : $this->id;
+        $this->template->css = $this->getPresenter()->template->basePath . '/' . $this->css;
+        $this->template->component = $this->getName();
         $this->template->data = json_encode(['row' => $this->data, 'validators' => []]);
-        $this->template->js = $this->getPresenter()->template->basePath . '/' . $this->jsDir;
         $this->template->links = json_encode($this->addHandlers(['crop', 'delete', 'done', 'export', 'import', 'move', 'prepare', 'put', 'resize', 'run', 'save', 'submit', 'validate']));
+        $this->template->js = $this->getPresenter()->template->basePath . '/' . $this->js;
+        if(!preg_match('/\./', $this->js)) {
+            $this->template->component = 'generalForm';
+            $this->template->js .= '/GeneralForm.js';
+        } 
         $this->template->setFile(__DIR__ . '/../templates/react.latte');
         $this->template->render();
     }
