@@ -32,7 +32,7 @@ class ReactForm extends Control implements IReactFormFactory {
     private $request;
     
     /** @var array */
-    private $rules;
+    private $rules = [];
     
     /** @var string */
     protected const EMAIL = 'isEmail';
@@ -67,6 +67,7 @@ class ReactForm extends Control implements IReactFormFactory {
                 }
             }
         }
+        $attributes['className'] = !isset($attributes['className']) ? 'form-control' : $attributes['className'];
         $this->data[$key] = ['Attributes' => $attributes,
                             'Label' => $label,
                             'Method' => $method,
