@@ -8,8 +8,8 @@ use Nette\ComponentModel\IComponent,
 /** @author Lubomir Andrisek */
 final class RowForm extends ReactForm implements IRowFormFactory {
 
-    public function __construct(string $js, string $css, IRequest $request) {
-        parent::__construct($js, $css, $request);
+    public function __construct(string $css, string $js, IRequest $request) {
+        parent::__construct($css, $js, $request);
     }
 
     public function create(): IReactFormFactory {

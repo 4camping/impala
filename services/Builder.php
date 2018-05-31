@@ -695,17 +695,20 @@ final class Builder implements IBuilder {
             $attributes =  ['className' => 'form-control', 'name' => intval($id), 'value' => is_null($value) ? '' : $value];
             $this->getAnnotation($column, 'disable') ? $attributes['readonly'] = 'readonly' : null;
             $this->getAnnotation($column, 'onchange') ? $attributes['onChange'] = 'submit' : null;
-            if (($this->getAnnotation($column, 'pri') && null == $value) || $this->getAnnotation($column, 'unrender')) {
+            if (($this->getAnnotation($column, 'pri') && null == $value) || $this->getAnnotation($column, ['unedit', 'unrender')) {
                 $this->row->addHidden($column, $column, ['value' => $value]);
             } else if ($this->getAnnotation($column, 'pri')) {
                 $this->row->addHidden($column, $column, ['value' => $value->__toString()]);
             } elseif ($this->getAnnotation($column, 'unedit')) {
             } elseif (!empty($default = $this->getAnnotation($column, 'enum'))) {
-                $attributes['data'] = [null => $this->translatorRepository->translate('--unchosen--')];
+                $attributes['data'] = [null => $this->translatorModel->translate('--unchosen--')];
                 foreach($default as $option => $status) {
-                    $attributes['data'][$option] = $this->translatorRepository->translate($status);
+                    $translation = $this->translatorModel->translate($status);
+                    if($value == $translation || $value == $status) {
+                        $attributes['value'] = $option;
+                    }
+                    $attributes['data'][$option] = $translation;
                 }
-                $attributes['value'] = '_' . $value;
                 $attributes['style'] = ['height' => '100%'];
                 $this->row->addSelect($column, $label . ':', $attributes, []);
             } elseif ($this->getAnnotation($column, ['datetime', 'timestamp'])) {

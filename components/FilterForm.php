@@ -7,8 +7,8 @@ use Nette\Http\IRequest;
 /** @author Lubomir Andrisek */
 final class FilterForm extends ReactForm implements IFilterFormFactory {
 
-    public function __construct(string $js, string $css, IRequest $request) {
-        parent::__construct($js, $css, $request);
+    public function __construct(string $css, string $js, IRequest $request) {
+        parent::__construct($css, $js, $request);
     }
 
     public function create(): IReactFormFactory {

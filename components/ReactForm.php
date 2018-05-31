@@ -53,18 +53,17 @@ class ReactForm extends Control implements IReactFormFactory {
 
     private function add(string $key, string $label, string $method, string $tag, array $attributes = []): IReactFormFactory {
         $attributes['id'] = $key;
+        if(isset($attributes['value']) && is_array($attributes['value']) &&  !empty($attributes['value'])) {
+            $attributes['value'] = $this->underscore($attributes['value']);
+        } else if(isset($attributes['value']) && !empty($attributes['value']) && isset($attributes['data']) && !empty($attributes['data'])) {
+            $attributes['value'] = '_' . $attributes['value'];
+        }
+        if(isset($attributes['data']) && !empty($attributes['data'])) {
+            $this->underscore($attributes['data']);
+        }
         foreach($attributes as $attributeId => $attribute) {
             if(null === $attribute) {
                 unset($attributes[$attributeId]);
-            /** keep given order in javascript */    
-            } elseif ('data' == $attributeId && is_array($attribute)) {
-                foreach($attribute as $overwriteId => $overwrite) {
-                    $attributes[$attributeId]['_' . $overwriteId] = $overwrite;
-                    unset($attributes[$attributeId][$overwriteId]);
-                }
-                if(isset($attributes['value'])) {
-                    $attributes['value'] = '_' . $attributes['value'];
-                }
             }
         }
         $attributes['className'] = !isset($attributes['className']) ? 'form-control' : $attributes['className'];
@@ -250,6 +249,15 @@ class ReactForm extends Control implements IReactFormFactory {
     public function setRequired(bool $value) {
         end($this->data); 
         $this->compulsory[key($this->data)] = $value;
+    }
+
+    /** keep given order in javascript */
+    private function underscore(array $data): array {
+        foreach($data as $overwriteId => $overwrite) {
+            $data['_' . $overwriteId] = $overwrite;
+            unset($data[$overwriteId]);
+        }
+        return $data;
     }
 }
 

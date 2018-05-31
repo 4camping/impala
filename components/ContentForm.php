@@ -45,7 +45,7 @@ final class ContentForm extends Control implements IContentFormFactory {
     /** @var WriteRepository */
     private $writeRepository;
 
-    public function __construct($jsDir, IContent $contentRepository, IBuilder $builder, ITranslator $translatorRepository,
+    public function __construct(string $jsDir, IContent $contentRepository, IBuilder $builder, ITranslator $translatorRepository,
         KeywordsRepository $keywordsRepository, WriteRepository $writeRepository) {
         $this->jsDir = $jsDir;
         $this->contentRepository = $contentRepository;
