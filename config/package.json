@@ -40,7 +40,7 @@
       "<rootDir>/node_modules/react/",
       "<rootDir>/node_modules/react-dom/"
     ],
-    "testRegex": "(/app/Masala/__tests__/.*|\\.(test|spec))\\.(js|jsx)$"
+    "testRegex": "(/app/Impala/__tests__/.*|\\.(test|spec))\\.(js|jsx)$"
   },
   "scripts": {
     "test": "jest"
