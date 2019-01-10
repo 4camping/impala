@@ -17,7 +17,6 @@
     "react-images-upload": "^1.1.1",
     "sync-request": "^4.0.2",
     "webpack": "^2.7.0",
-    "webpack-dev-server": "^2.4.5",
     "webpack-manifest-plugin": "^1.1.0",
     "webpack-md5-hash": "^0.0.5"
   },
