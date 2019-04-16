@@ -4,14 +4,8 @@ namespace Impala;
 
 interface IEdit {
 
-    public function after(IReactFormFactory $form): IReactFormFactory;
+    public function after(IReactFormFactory $form): void;
 
-    public function crop(array $image, array $row): array;
-    
-    public function delete(array $image, array $row): array;
-
-    public function move(array $image, array $row): void;
-
-    public function submit(string $primary, array $response): array;
+    public function submit(array $primary, array $response): array;
 
 }

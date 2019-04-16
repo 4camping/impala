@@ -1,5 +1,4 @@
 <?php
-
 namespace Impala;
 
 use Nette\Application\IPresenter,
@@ -15,25 +14,23 @@ class ReactForm extends Control implements IReactFormFactory {
 
     /** @var string */
     private $css;
-    
+
     /** @var array */
     private $compulsory = [];
-    
+
     /** @var array */
     private $data  = [];
-
     /** @var string */
     private $id;
-    
+
     /** @var string */
     private $js;
-
     /** @var IRequest */
     private $request;
-    
+
     /** @var array */
     private $rules = [];
-    
+
     /** @var string */
     protected const EMAIL = 'isEmail';
 
@@ -41,14 +38,14 @@ class ReactForm extends Control implements IReactFormFactory {
         $this->css = $css;
         $this->js = $js;
         $this->request = $request;
+        $this->monitor(IPresenter::class, [$this, 'attached']);
     }
 
-    public function create(): IReactFormFactory {
+    public function create(): ReactForm {
         return $this;
     }
 
     public function attached(IComponent $presenter): void {
-        parent::attached($presenter);
     }
 
     private function add(string $key, string $label, string $method, string $tag, array $attributes = []): IReactFormFactory {
@@ -59,7 +56,7 @@ class ReactForm extends Control implements IReactFormFactory {
             $attributes['value'] = '_' . $attributes['value'];
         }
         if(isset($attributes['data']) && !empty($attributes['data'])) {
-            $this->underscore($attributes['data']);
+            $attributes['data'] = $this->underscore($attributes['data']);
         }
         foreach($attributes as $attributeId => $attribute) {
             if(null === $attribute) {
@@ -99,7 +96,7 @@ class ReactForm extends Control implements IReactFormFactory {
         }
         return $this->add($key, $label, __FUNCTION__, 'div', $attributes);
     }
-    
+
     public function addGoogleMap(string $key, string $label, array $attributes = []): IReactFormFactory {
         $attributes['value']['Latitude'] = round($attributes['value']['Latitude'], 2);
         $attributes['value']['Longitude'] = round($attributes['value']['Longitude'], 2);
@@ -146,9 +143,9 @@ class ReactForm extends Control implements IReactFormFactory {
         $attributes['type'] = 'radio';
         return $this->add($key, $label, __FUNCTION__, 'input', $attributes);
     }
-    
+
     public function addRule(string $validator): IReactFormFactory {
-        end($this->data); 
+        end($this->data);
         $this->rules[key($this->data)] = $validator;
         return $this;
     }
@@ -202,7 +199,7 @@ class ReactForm extends Control implements IReactFormFactory {
     public function getRequest(): IRequest {
         return $this->request;
     }
-    
+
     public function handleValidate(): void {
         $values = json_decode(file_get_contents('php://input'), true);
         $validators = [];
@@ -215,7 +212,7 @@ class ReactForm extends Control implements IReactFormFactory {
                 $validators[$key] = $values['row'][$key];
             };
         }
-        $this->getPresenter()->sendResponse(new JsonResponse($validators));            
+        $this->getPresenter()->sendResponse(new JsonResponse($validators));
     }
 
     public function isSignalled(): bool {
@@ -241,13 +238,13 @@ class ReactForm extends Control implements IReactFormFactory {
         if(!preg_match('/\./', $this->js)) {
             $this->template->component = 'generalForm';
             $this->template->js .= '/GeneralForm.js';
-        } 
+        }
         $this->template->setFile(__DIR__ . '/../templates/react.latte');
         $this->template->render();
     }
 
     public function setRequired(bool $value) {
-        end($this->data); 
+        end($this->data);
         $this->compulsory[key($this->data)] = $value;
     }
 
@@ -259,10 +256,9 @@ class ReactForm extends Control implements IReactFormFactory {
         }
         return $data;
     }
-}
 
+}
 interface IReactFormFactory {
 
-    public function create(): IReactFormFactory;
-
+    public function create(): ReactForm;
 }

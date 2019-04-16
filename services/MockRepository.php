@@ -2,12 +2,13 @@
 
 namespace Impala;
 
-use Nette\Database\Table\IRow;
+use Impala\EmptyRow,
+    Nette\Database;
 
 /** @author Lubomir Andrisek */
 final class MockRepository extends BaseRepository implements IMock {
 
-    public function explainColumn(string $table, string $column): IRow {
+    public function explainColumn(string $table, string $column): Database\IRow {
         return $this->database->query('EXPLAIN SELECT `' . $column . '` FROM `' . $table . '`')->fetch();
     }
 
@@ -17,28 +18,37 @@ final class MockRepository extends BaseRepository implements IMock {
                         ->getColumns($table);
     }
 
-    public function getDuplicity(string $table, string $group, array $columns): IRow {
+    public function getDuplicity(string $table, string $group, array $columns): Database\Table\IRow {
         $resource = $this->database->table((string) $table)
                         ->select($group . ', COUNT(id) AS sum');
         foreach($columns as $column => $value) {
             $resource->where($column, $value);
         }
-        return $resource->fetch();
-    }
-
-    public function getTestRow(string $collection, array $filters = []): array {
-        $sum = $this->client->selectCollection($this->database, $collection)
-            ->aggregate([['$group' => ['_id' => null, 'total' => ['$sum' => 1]]]])
-            ->toArray();
-        $sum = reset($sum)->total;
-        if(null == $row = $this->client->selectCollection($this->database, $collection)
-                        ->findOne($filters, ['skip' => rand(0, $sum - 1)])) {
-            return [];
+        if(null == $row = $resource->having('sum > 1')->group($group)->fetch()) {
+            return new EmptyRow();
         }
-        return $row->getArrayCopy();
+        return $row;
     }
 
-    public function getTestRows(string $table, array $clauses = [], int $limit): array {
+    public function getPrimary(string $table): ?array {
+        return $this->database->table($table)
+                    ->getPrimary();
+    }
+
+    public function getTestRow(string $table, array $columns = [], $select = null, $order = null): Database\Table\IRow {
+        $resource = $this->database->table($table);
+        empty($select) ?  null : $resource->select($select);
+        foreach ($columns as $column => $value) {
+            is_bool($value) ? $resource->where($column) : $resource->where($column, $value);
+        }
+        empty($order) ? $resource->order('RAND()') : $resource->order($order);
+        if(null == $row  = $resource->limit(1)->fetch()) {
+            return new EmptyRow();
+        }
+        return $row;
+    }
+
+    public function getTestRows(string $table, array $clauses, int $limit): array {
         $resource = $this->database->table($table);
         foreach ($clauses as $column => $value) {
             is_bool($value) ? $resource->where($column) : $resource->where($column, $value);
@@ -48,16 +58,13 @@ final class MockRepository extends BaseRepository implements IMock {
                         ->fetchAll();
     }
 
-    public function getTestCollections(): array {
-        $collections = [];
-        $list = $this->client->selectDatabase($this->database)->listCollections();
-        foreach($list as $collection) {
-            $collections[] = $collection->getName();
-        }
-        return $collections;
+    public function getTestTables(): array {
+        $tables = $this->database->query('SHOW TABLES;')->fetchAll();
+        shuffle($tables);
+        return $tables;
     }
 
-    public function updateTestRow(string $table, array $data, array $clauses = []): int {
+     public function updateTestRow($table, array $data, array $clauses = []): int {
         $resource = $this->database->table($table);
         foreach ($clauses as $column => $value) {
             is_bool($value) ? $resource->where($column) : $resource->where($column, $value);
@@ -65,7 +72,7 @@ final class MockRepository extends BaseRepository implements IMock {
         return $resource->update($data);
     }
 
-    public function removeTestRow(string $table, array $clauses = []): int {
+    public function removeTestRow($table, array $clauses = []): int {
         $resource = $this->database->table($table);
         foreach ($clauses as $column => $value) {
             is_bool($value) ? $resource->where($column) : $resource->where($column, $value);

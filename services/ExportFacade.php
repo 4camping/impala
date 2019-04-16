@@ -2,44 +2,46 @@
 
 namespace Impala;
 
-use Nette\Http\IRequest,
+use Nette\Database\Table\IRow,
+    Nette\Http\IRequest,
     Nette\Localization\ITranslator;
 
-final class ExportService implements IProcess {
+/** @author Lubomir Andrisek */
+final class ExportFacade implements IProcess {
 
     /** @var string */
     private $link;
 
-    /** @var array */
+    /** @var IRow */
     private $setting;
 
     /** @var string */
     private $tempDir;
 
     /** @var ITranslator */
-    private $translatorRepository;
+    private $translatorModel;
 
-    public function __construct($tempDir, IRequest $request, ITranslator $translatorRepository) {
+    public function __construct(string $tempDir, IRequest $request, ITranslator $translatorModel) {
         $this->tempDir = $tempDir;
         $url = $request->getUrl();
         $this->link = $url->scheme . '://' . $url->host . $url->scriptPath;
-        $this->translatorRepository = $translatorRepository;
+        $this->translatorModel = $translatorModel;
     }
 
-    public function attached(IReactFormFactory $form): IReactFormFactory { 
-        return $form;
-    }
+    public function attached(IReactFormFactory $form): void { }
 
     public function done(array $response, IImpalaFactory $impala): array {
-        return ['label' => $this->translatorRepository->translate('Click here to download your file.'), 'href' => $this->link . 'temp/' . $response['_file']];
+        return ['Label' => $this->translatorModel->translate('Click here to download your file.'), 'href' => $this->link . 'temp/' . $response['_file']];
     }
-
-    public function getFolder(): string {
+    
+    public function getFile(): string {
         return $this->tempDir;
     }
 
-    public function getSetting(): array {
-        return $this->setting;
+    public function getSetting(): IRow {
+        if(null == $this->setting) {
+            return new EmptyRow();
+        }
     }
 
     public function prepare(array $response, IImpalaFactory $impala): array {
@@ -49,8 +51,8 @@ final class ExportService implements IProcess {
     public function run(array $response, IImpalaFactory $impala): array {
         return $response;
     }
-
-    public function setSetting(array $setting): IProcess {
+    
+    public function setSetting(IRow $setting): IProcess {
         $this->setting = $setting;
         return $this;
     }

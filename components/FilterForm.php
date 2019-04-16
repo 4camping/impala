@@ -11,7 +11,7 @@ final class FilterForm extends ReactForm implements IFilterFormFactory {
         parent::__construct($css, $js, $request);
     }
 
-    public function create(): IReactFormFactory {
+    public function create(): ReactForm {
         return $this;
     }
 
@@ -19,5 +19,5 @@ final class FilterForm extends ReactForm implements IFilterFormFactory {
 
 interface IFilterFormFactory {
 
-    public function create(): IReactFormFactory;
+    public function create(): ReactForm;
 }

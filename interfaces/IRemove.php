@@ -4,6 +4,6 @@ namespace Impala;
 
 interface IRemove {
 
-    public function remove(string $primary, array $response): array;
+    public function remove(array $primary, array $response): array;
 
 }

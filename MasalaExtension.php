@@ -6,23 +6,24 @@ use Exception,
     Nette\DI\CompilerExtension,
     Nette\PhpGenerator\ClassType;
 
+/** @author Lubomir Andrisek */
 final class ImpalaExtension extends CompilerExtension {
 
-    private $defaults = ['assets' => 'assets/impala',
-        'css' => 'assets/impala/css',
+    private $defaults = ['assets' => 'assets/components/impala',
+        'css' => 'assets/components/impala/css',
         'feeds' => 'feeds',
-        'format' => ['date' => ['edit' => 'd.m.Y', 'query'=> 'Y-m-d', 'select' => 'GET_FORMAT(DATE,"EUR")'],
-                    'time' => ['edit' => 'Y-m-d H:i:s', 'query' => 'Y-m-d', 'select' => 'GET_FORMAT(DATE,"EUR")']],
+        'format' => ['date' => ['build' => 'd.m.Y', 'query'=> 'Y-m-d', 'select' => 'GET_FORMAT(DATE,"EUR")'],
+                    'time' => ['build' => 'Y-m-d H:i:s', 'query' => 'Y-m-d', 'select' => 'GET_FORMAT(DATE,"EUR")']],
         'help' => 'help',
-        'npm' => 'bower',
-        'keywords' => 'keywords',
+        'npm' => 'node_modules',
         'log' => 'log',
         'pagination' => 20,
         'settings' => 'settings',
         'speed' => 50,
         'spice' => 'spice',
-        'upload' => 10,
-        'write' => 'write'];
+        'tests' => ['user' => ['id' => 1, 'password' => 'password', 'username' => 'username'],
+                    'parameters' => ['date' => '2017-4-12', 'id' => 4574, 'limit' => 10]],
+        'upload' => 10];
 
     public function getConfiguration(array $parameters) {
         foreach($this->defaults as $key => $parameter) {
@@ -37,34 +38,28 @@ final class ImpalaExtension extends CompilerExtension {
         $builder = $this->getContainerBuilder();
         $parameters = $this->getConfiguration($builder->parameters);
         $manifest = (array) json_decode(file_get_contents($parameters['wwwDir'] . '/' . $parameters['impala']['assets'] . '/js/manifest.json'));
-        $builder->addDefinition($this->prefix('Builder'))
+        $builder->addDefinition($this->prefix('builder'))
                 ->setFactory('Impala\Builder', [$parameters['impala']]);
         $builder->addDefinition($this->prefix('impalaExtension'))
                 ->setFactory('Impala\ImpalaExtension', []);
-        $builder->addDefinition($this->prefix('contentForm'))
-                ->setFactory('Impala\ContentForm', [$manifest['ContentForm.js']]);
-        $builder->addDefinition($this->prefix('exportService'))
-                ->setFactory('Impala\ExportService', [$builder->parameters['tempDir']]);
+        $builder->addDefinition($this->prefix('exportFacade'))
+                ->setFactory('Impala\ExportFacade', [$builder->parameters['tempDir']]);
+        $builder->addDefinition($this->prefix('emptyRow'))
+                ->setFactory('Impala\EmptyRow');
         $builder->addDefinition($this->prefix('grid'))
                 ->setFactory('Impala\Grid', [$parameters['appDir'], $manifest['Grid.js'], $parameters['impala']]);
         $builder->addDefinition($this->prefix('filterForm'))
                 ->setFactory('Impala\FilterForm', [$parameters['impala']['css'], '']);
-        $builder->addDefinition($this->prefix('importForm'))
-                ->setFactory('Impala\ImportForm', [$parameters['impala']['css'], $manifest['ImportForm.js']]);
         $builder->addDefinition($this->prefix('helpRepository'))
-                ->setFactory('Impala\HelpRepository', [$parameters['impala']['database'], $parameters['impala']['helps']]);
-        $builder->addDefinition($this->prefix('keywordsRepository'))
-                ->setFactory('Impala\KeywordsRepository', [$parameters['impala']['database'], $parameters['impala']['keywords']]);
+                ->setFactory('Impala\HelpRepository', [$parameters['impala']['help']]);
         $builder->addDefinition($this->prefix('impala'))
                 ->setFactory('Impala\Impala', [$parameters['impala']]);
         $builder->addDefinition($this->prefix('mockRepository'))
-                ->setFactory('Impala\MockRepository', [$parameters['impala']['database'], 'test']);
-        $builder->addDefinition($this->prefix('mockService'))
-                ->setFactory('Impala\MockService');
+                ->setFactory('Impala\MockRepository');
+        $builder->addDefinition($this->prefix('mockFacade'))
+                ->setFactory('Impala\MockFacade');
         $builder->addDefinition($this->prefix('rowForm'))
                 ->setFactory('Impala\RowForm', [$parameters['impala']['css'], $manifest['RowForm.js']]);
-        $builder->addDefinition($this->prefix('writeRepository'))
-                ->setFactory('Impala\WriteRepository', [$parameters['impala']['database'], $parameters['impala']['write']]);
     }
 
     public function beforeCompile() {

@@ -4,7 +4,6 @@ namespace Impala;
 
 interface IChart {
 
-    /** @return array */
-    function chart(array $spice, array $row);
+    public function chart(array $spice, array $row): array;
 
 }

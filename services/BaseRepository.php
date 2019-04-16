@@ -2,35 +2,30 @@
 
 namespace Impala;
 
-use MongoDB\Client,
-    MongoDB\Collection,
-    Nette\Caching\Cache,
+use Nette\Caching\Cache,
+    Nette\Database\Context,
     Nette\Caching\IStorage;
 
 /** @author Lubomir Andrisek */
-class BaseRepository {
+abstract class BaseRepository {
 
     /** @var Cache */
-    protected $cache;
+    public $cache;
 
-    /** @var Collection */
-    protected $collection;
-
-    /** @var Client */
-    protected $client;
+    /** @var Context */
+    public $database;
 
     /** @var string */
-    protected $database;
+    public $source;
 
-    /** @var string */
-    protected $source;
-
-    public function __construct(string $database, string $source, IBuilder $grid, Client $client, IStorage $storage) {
-        $this->cache = new Cache($storage);
-        $this->client = $client;
-        $this->collection = $client->selectCollection($database, $source);
-        $this->database = $database;
+    public function __construct($source = null, Context $database, IStorage $storage) {
         $this->source = $source;
+        $this->database = $database;
+        $this->cache = new Cache($storage);
+    }
+
+    public function getSource(): string {
+        return $this->source;
     }
 
 }

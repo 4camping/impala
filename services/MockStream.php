@@ -8,7 +8,7 @@ final class MockStream {
     protected $data = 'hello world';
 
     public $context;
- 
+
     function __construct(){
         if(file_exists($this->buffer_filename())){
             $this->data = file_get_contents($this->buffer_filename());

@@ -4,6 +4,6 @@ namespace Impala;
 
 interface IUpdate {
 
-    public function update(int $row, array $data): array ;
+    public function update(string $key, array $data): array;
 
 }

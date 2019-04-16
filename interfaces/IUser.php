@@ -2,10 +2,7 @@
 
 namespace Impala;
 
-use MongoDB\UpdateResult;
-
 interface IUser {
 
-    public function updateUser(float $score, array $data): UpdateResult;
-
+    public function updateUser(int $id, array $data): int;
 }

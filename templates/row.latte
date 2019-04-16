@@ -1,11 +1,2 @@
-{block assets}
-    <link rel="stylesheet" href="{$basePath}/{$npm}/cropperjs/dist/cropper.css">
-{/block}
-{block import}
-    {import 'dialog.latte'}
-{/block}
-{if !empty($help)}
-    <a class='btn btn-success' type='button' data-target='#{$control->getName()}-help' data-toggle='modal'>{_1102.0|firstUpper}</a>
-{/if}
+<link href="{$basePath}/{$npm}/react-datetime/css/react-datetime.css" n:if="$npm" rel='stylesheet' />
 {control rowForm}
-{include dialog}

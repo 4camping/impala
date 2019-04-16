@@ -2,6 +2,7 @@
 
 namespace Impala;
 
+/** @author Lubomir Andrisek */
 final class Validators {
 
     public const EMAIL = 'isEmail';
@@ -33,7 +34,7 @@ final class Validators {
 
     public const LIST = 'isList';
     public static function isList($value): bool {
-        return Arrays::isList($value);
+        return is_array($value) && (!$value || array_keys($value) === range(0, count($value) - 1));
     }
 
     public const RANGE = 'isInRange';

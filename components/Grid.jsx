@@ -1,15 +1,20 @@
-import axios from 'axios'
-import Datetime from 'react-datetime'
-import React, {Component} from 'react'
-import ReactDOM from 'react-dom'
-import request from 'sync-request'
+import {AreaChart} from 'react-easy-chart';
+import axios from 'axios';
+import Datetime from 'react-datetime';
+import React, {Component} from 'react';
+import ReactDOM from 'react-dom';
+import request from 'sync-request';
+import ReactHtmlParser, { processNodes, convertNodeToElement, htmlparser2 } from 'react-html-parser';
 
 var BUTTONS = 'buttons'
 var COLUMNS = 'columns'
-var CHART = 'chart'
 var CHARTS = 'charts'
+var EDIT = 'edit'
+var ID = 'grid'
+var ITERATOR = 1
 var LISTENERS = 'listeners'
 var LISTS = 'lists'
+var NEW = 'new'
 var ROW = 'row'
 var ROWS = 'rows'
 var SIZE = 0
@@ -18,43 +23,19 @@ var VALIDATORS = 'validators'
 export default class Grid extends Component {
     constructor(props) {
         super(props)
-        var name = this.constructor.name;
-        this.state = JSON.parse(document.getElementById(name[0].toLowerCase() + name.substring(1, name.length)).getAttribute('data'));
-    }
-    add(event) {
-        var state = []
-        state[ROW] = this.state[ROW]
-        state[ROWS] = this.state[ROWS]
-        var rows = state[ROWS][0]
-        for(var row in state[ROWS][0]) {
-            rows[row] = null
-        }
-        var data = {id:event.target.id,row:{}}
-        for(var row in state[ROW].add) {
-            if(null != rows[row] && null != rows[row].Label) {
-                rows[row].Label = state[ROW].add[row].Attributes.value
-            } else if(null != rows[row] && null != rows[row].Attributes) {
-                rows[row].Attributes.value = state[ROW].add[row].Attributes.value
-            } else {
-                rows[row] = state[ROW].add[row].Attributes.value
-            }
-            data.row[row] = state[ROW].add[row].Attributes.value
-        }
-        state[ROWS][event.target.id] = rows
-        state[ROW].add = JSON.parse(request('POST', this.state[BUTTONS].edit.Attributes.link, { json: data }).getBody('utf8'))
-        this.setState(state)
+        this.state = JSON.parse(document.getElementById(ID).getAttribute('data'))
     }
     addAction(key) {
         return <div key={'trigger-' + key} style={this.state[BUTTONS][key].style}><a className={this.state[BUTTONS][key].className}
                     id={'trigger-' + key}
                     href={this.state[BUTTONS][key].href}
-                    >{this.state[BUTTONS][key].label}</a>
+                    >{this.state[BUTTONS][key].Label}</a>
             <a className={this.state[BUTTONS][key].className}
                 href={this.state[BUTTONS][key].href}
                 id={key}
                 key={key}
                 style={{display:'none'}}
-                onClick={this.bind(this.state[BUTTONS][key].onClick)}>{this.state[BUTTONS][key].label}</a>
+                onClick={this.bind(this.state[BUTTONS][key].onClick)}>{this.state[BUTTONS][key].Label}</a>
             </div>
     }
     addActions(action, key) {
@@ -76,38 +57,60 @@ export default class Grid extends Component {
         return container
     }
     addButton(key) {
-        return <th className={'grid-col-' + key} key={key}>
+        return <div key={'elements-' + key} className={'form-control col-xy-sm'}>
             <a className={this.state[COLUMNS][key].Attributes.className}
                href={this.state[COLUMNS][key].Attributes.href}
                onClick={this.bind(this.state[COLUMNS][key].Attributes.onClick)}
                id={key}
                key={key}
                title={this.state[COLUMNS][key].Attributes.title}>{this.state[COLUMNS][key].Attributes.Label}</a>
-        </th>
+        </div>
     }
     addBody() {
         var body = []
-        var rows = this.state[ROWS]
-        body.push(this.addSummary())
         var i = 0
+        var rows = []
+        for(var key in this.state[NEW]) {
+            rows[i++] = this.state[NEW][key]
+        }
+        for(var key in this.state[ROWS]) {
+            rows[i++] = this.state[ROWS][key]
+        }
+        body.push(this.addSummary())
         for(var key in rows) {
-            var id = 'row-' + i++;
-            body.push(<tr id={id} style={rows[key].style} key={id}>{this.addRow(rows[key], key)}</tr>)
+            var id = 'row-' + key;
+            body.push(<tr id={id} style={rows[key].style}  className={rows[key].className} key={id}>{this.addRow(rows[key], key)}</tr>)
             if('object' == typeof(this.state[CHARTS][key])) {
-                body.push(<tr id={'row-chart-' + i} key={'row-chart-' + i} style={{height:'200px'}} ></tr>)
+                var clone = document.getElementById('row-' + key)
+                body.push(<AreaChart
+                    xType='text'
+                    axes
+                    data={this.state[CHARTS][key]}
+                    xTicks={5}
+                    yTicks={3}
+                    dataPoints
+                    key={'chart-' + key}
+                    grid
+                    height={200}
+                    noAreaGradient
+                    tickTimeDisplayFormat={'%d %m'}
+                    interpolate='cardinal'
+                    style={{position:'absolute'}}
+                    width={clone.offsetWidth}
+                />)
+                body.push(<tr height={200} width={clone.offsetWidth}></tr>)
             }
         }
-        SIZE = i
+        SIZE = key
         return body
     }
     addCheckbox(key) {
-        var th = 'grid-col-' + key
         var columns = this.state[COLUMNS]
         var checked = ''
         if('clicked' == columns[key].Attributes.value) {
             checked = 'checked'
         }
-        return <th className={th} key={key} style={columns[key].Attributes.style}>
+        return <div key={'elements-' + key}>
             {this.addLabel(key)}
             <input id={key}
                    className={columns[key].Attributes.className}
@@ -118,28 +121,36 @@ export default class Grid extends Component {
                    value={columns[key].Attributes.value}
                    checked={checked}
                    type='checkbox' />
-        </th>
+        </div>
     }
     addColumns() {
         var body = []
         var columns = this.state[COLUMNS]
+        ITERATOR = 1
         for (var key in columns) {
             var closure = this[columns[key].Method]
             if('function' == typeof(closure) && false == columns[key].Attributes.filter && false == columns[key].Attributes.unrender) {
-                body.push(this[columns[key].Method](key))
+                body.push(<th className={'grid-col-' + key} key={key} style={columns[key].Attributes.style}>{this[columns[key].Method](key)}</th>)
             } else if('function' == typeof(closure) && true == columns[key].Attributes.filter && false == columns[key].Attributes.unrender) {
                 body.push(this.addEmpty(key))
             }
         }
         return body
     }
+    addDate(data) {
+        return <div><Datetime locale={data.Attributes.locale}
+                         id={data.Attributes.id}
+                         name={data.Attributes.name}
+                         onChange={this.date.bind(this, {target:data.Attributes})}
+                         value={data.Attributes.value} /></div>
+    }
     addDateTime(key) {
-        return <th className={'grid-col-' + key} id={key} key={key} style={this.state[COLUMNS][key].Attributes.style}>
+        return <div key={'elements-' + key}>
             {this.addLabel(key)}
             <Datetime locale={this.state[COLUMNS][key].Attributes.locale}
                          onChange={this.datetime.bind(this, key)}
                          value={this.state[COLUMNS][key].Attributes.value}
-        /></th>
+        /></div>
     }
     datetime(key, event) {
         var state = []
@@ -151,81 +162,65 @@ export default class Grid extends Component {
         }
         this.setState(state)
     }
-    addDialog(key) {
-        if(undefined == this.state[BUTTONS][key].length) {
-            var container = []
-            var rows = this.state[ROW][key]
-            for(var row in rows) {
-                if('addHidden' == rows[row].Method) {
-                    container.push(<input key={key} value={rows[row].Label} type='hidden' />)
-                } else if('_submit' == row && 'add' == key) {
-                    container.push(<div key={'dialogs-' + row}><input className='form-control btn-success'
-                                                                      id={rows[row].Attributes.id}
-                                                                      name={rows[row].Attributes.name}
-                                                                      value={rows[row].Label}
-                                                                      onClick={this.insert.bind(this)}
-                                                                      type='submit'/></div>)
-                } else if('_submit' == row) {
-                    container.push(<div key={'dialogs-' + row}><input className='form-control btn-success'
-                                                                      id={rows[row].Attributes.id}
-                                                                      name={rows[row].Attributes.name}
-                                                                      value={rows[row].Label}
-                                                                      onClick={this.update.bind(this)}
-                                                                      type='submit'
-                                                                      /></div>)
-                } else if('_message' == row) {
-                    container.push(<div className={rows[row].Attributes.className} key={'dialogs-' + row} style={rows[row].Attributes.style}>{rows[row].Label}</div>)
-                } else if('select' == rows[row].Tag) {
-                    var data = []
-                    var options = rows[row].Attributes.data
-                    for(var value in options) {
-                        if(value == '_' + rows[row].Attributes.value) {
-                            data.push(<option key={row + '-' + value} selected='selected' value={value}>{options[value]}</option>)
-                        } else {
-                            data.push(<option key={row + '-' + value} value={value}>{options[value]}</option>)
-                        }
+    addDialog() {
+        var rows = this.state[EDIT][this.state[ROW]]
+        var container = []
+        for(var row in rows) {
+            var key = this.state[ROW] + '-' + row
+            if('addHidden' == rows[row].Method) {
+                container.push(<input key={row} value={rows[row].Label} type='hidden' />)
+            } else if('_submit' == row) {
+                container.push(<div key={'dialogs-' + key}><input className='form-control btn-success'
+                                                                  id={rows[row].Attributes.id}
+                                                                  name={rows[row].Attributes.name}
+                                                                  onClick={this.save.bind(this)}
+                                                                  value={rows[row].Label}
+                                                                  type='submit' /></div>)
+            } else if('_message' == row) {
+                container.push(<div className={rows[row].Attributes.className} key={key} style={rows[row].Attributes.style}>{rows[row].Label}</div>)
+            } else if('select' == rows[row].Tag) {
+                var data = []
+                var options = rows[row].Attributes.data
+                for(var value in options) {
+                    if(value == rows[row].Attributes.value) {
+                        data.push(<option key={'dialogs-' + key + '-' + value} selected='selected' value={value}>{options[value]}</option>)
+                    } else {
+                        data.push(<option key={'dialogs-' + key + '-' + value} value={value}>{options[value]}</option>)
                     }
-                    container.push(<div key={'labels-' + row}><label>{rows[row].Label}</label></div>)
-                    container.push(<select className='form-control'
-                                           id={rows[row].Attributes.id}
-                                           key={'dialogs-' + row}
-                                           name={rows[row].Attributes.name}
-                                           onChange={this.type.bind(this)}>{data}></select>)
-                } else if ('addDateTime' == rows[row].Method) {
-                    var attributes = rows[row].Attributes
-                    attributes.key = key
-                    container.push(<div key={'labels-' + row}><label>{rows[row].Label}</label></div>)
-                    container.push(<Datetime locale={rows[row].Attributes.locale}
-                                             id={rows[row].Attributes.id}
-                                             key={'dialogs-' + row}
-                                             name={rows[row].Attributes.name}
-                                             onChange={this.date.bind(this, {target:attributes})}
-                                             value={rows[row].Attributes.value} />)
-                } else {
-                    rows[row].Attributes.onChange = this.type.bind(this)
-                    container.push(<div key={'labels-' + row}><label>{rows[row].Label}</label></div>)
-                    container.push(<div key={'dialogs-' + row}>{React.createElement(rows[row].Tag, rows[row].Attributes)}</div>)
                 }
-                if(null == this.state[VALIDATORS][row]) { } else {
-                    container.push(<div key={'validator-' + row} className='bg-danger'>{this.state[VALIDATORS][row]}</div>)
-                }
+                container.push(<div key={'labels-' + row}><label>{rows[row].Label}</label></div>)
+                container.push(<select className='form-control'
+                                       id={rows[row].Attributes.id}
+                                       key={'dialogs-' + key}
+                                       name={rows[row].Attributes.name}
+                                       onChange={this.type.bind(this)}>{data}></select>)
+            } else if ('addDateTime' == rows[row].Method) {
+                container.push(<div key={'labels-' + row}><label>{rows[row].Label}</label></div>)
+                container.push(<div key={'dialogs-' + key}>{this.addDate(rows[row])}</div>)
+            } else {
+                rows[row].Attributes.onChange = this.type.bind(this)
+                container.push(<div key={'labels-' + row}><label>{rows[row].Label}</label></div>)
+                container.push(<div key={'dialogs-' + key}>{React.createElement(rows[row].Tag, rows[row].Attributes)}</div>)
             }
-            return <div><a id='trigger-message' style={{display:'hidden'}} data-target={'#impala-' + key} data-toggle='modal'></a>
-                <div className='modal fade' id={'impala-' + key} tabIndex='-1' role='dialog' aria-labelledby={key} aria-hidden='true' style={{zIndex:'1099'}}>
-                    <div className='modal-dialog'>
-                        <div className='modal-content'>
-                            <div className='modal-header'>
-                                <button type='button' className='close' data-dismiss='modal' aria-hidden='true'>&times;</button>
-                                <h4 className='modal-title' id={'impala-label-' + key}>{this.state[BUTTONS][key].Label}</h4>
-                            </div>
-                            <div className='modal-body' id={'impala-' + key + '-modal-body'}>{container}</div>
-                        </div>
-                    </div>
-                </div></div>
+            if(null == this.state[VALIDATORS][row]) { } else {
+                container.push(<div key={'validator-' + key} className='bg-danger'>{this.state[VALIDATORS][row]}</div>)
+            }
         }
+        return <div><a id='trigger-message' style={{display:'hidden'}} data-target={'#impala-edit'} data-toggle='modal'></a>
+            <div className='modal fade' id={'impala-edit'} tabIndex={-1} role='dialog' aria-labelledby='edit' aria-hidden='true' style={{zIndex:'1099'}}>
+                <div className='modal-dialog'>
+                    <div className='modal-content'>
+                        <div className='modal-header'>
+                            <button type='button' className='close' data-dismiss='modal' aria-hidden='true'>&times;</button>
+                            <h4 className='modal-title' id={'impala-label-edit'}>{this.state[BUTTONS].edit.Label}</h4>
+                        </div>
+                        <div className='modal-body' id={'impala-edit-modal-body'}>{container}</div>
+                    </div>
+                </div>
+            </div></div>
     }
     addEmpty(key) {
-        return <th key={key} className={'grid-col-' + key}></th>
+        return <th className={'grid-col-' + key} key={key}></th>
     }
     addFilters() {
         var body = [];
@@ -239,59 +234,7 @@ export default class Grid extends Component {
         return body
     }
     addHidden(key) {
-        return <th class={'grid-col-' + key} key={key}></th>
-    }
-    addGraphs() {
-        var charts = []
-        var header = document.getElementById('impala-header')
-        var margin = 0
-        var summary = document.getElementById('impala-summary')
-        var width = 50
-        if(null != header) {
-            charts.push(<tr key='chart-header' style={{height:header.offsetHeight,width:header.offsetWidth,visible:'hidden'}}></tr>)
-            charts.push(<tr key='chart-summery' style={{height:summary.offsetHeight,width:summary.offsetWidth,visible:'hidden'}}></tr>)
-            var i = 0
-            for(var key in this.state[CHARTS]) {
-                for(var chart in this.state[CHARTS][key]) {
-                    i++
-                }
-                break
-            }
-            for(var key in this.state[COLUMNS]) {
-                if(key == this.state[CHART] || '' == this.state[CHART]) {
-                    break
-                } else if(null != document.getElementById('grid-col-' + key)) {
-                    margin += document.getElementById('grid-col-' + key).offsetWidth
-                }
-            }
-            width = (header.offsetWidth - margin) / i
-            if(width > 60) {
-                width = 60
-            }
-        }
-        for(var key in this.state[ROWS]) {
-            if(undefined != this.state[CHARTS][key]) {
-                var row = document.getElementById('row-' + key)
-                var container = []
-                charts.push(<tr key={'chart-row-' + key} style={{height:row.offsetHeight,width:row.offsetWidth}}></tr>)
-                container.push(<th key='chart-fill' width={margin + ' px'}></th>)
-                for(var chart in this.state[CHARTS][key]) {
-                    var value = ''
-                    if(this.state[CHARTS][key][chart].value > 0) {
-                        value = this.state[CHARTS][key][chart].value
-                    }
-                    container.push(<th className='chart' key={'chart-' + chart} style={{width:width + 'px'}}><span key={'chart-' + chart} style={{height:'100%'}}>
-                        <span style={{background:'rgba(209, 236, 250, 0.75)',height:this.state[CHARTS][key][chart].percent + '%'}}>{value}</span>
-                    </span><span>{chart}</span></th>)
-                }
-                charts.push(<tr id={'row-fix-' + key} key={'row-fix-' + key}>{container}</tr>)
-            }
-            if(undefined == this.state[CHARTS][key] && this.state[CHARTS].length > 0) {
-                var row = document.getElementById('row-' + key)
-                charts.push(<tr key={'chart-row-' + key} style={{height:row.offsetHeight,width:row.offsetWidth}}></tr>)
-            }
-        }
-        return charts
+        return <th className={'grid-col-' + key} key={key}></th>
     }
     addMultiSelect(key) {
         var values = new Object()
@@ -333,7 +276,7 @@ export default class Grid extends Component {
         if(true == selected) {
             select = <ul className='list-group'>{container}</ul>
         }
-        return <th className={'grid-col-' + key} id={key} key={key}>{this.addLabel(key)}
+        return <div key={'elements-' + key}>{this.addLabel(key)}
             {select}
             <div className='input-group'>
                 <input alt={alt}
@@ -356,7 +299,7 @@ export default class Grid extends Component {
                     </ul>
                 </div>
             </div>
-        </th>
+        </div>
     }
     addLabel(key) {
         if(true == this.state[COLUMNS][key].Attributes.filter) {
@@ -409,19 +352,20 @@ export default class Grid extends Component {
         var container = []
         var extent = 9
         if(this.state[BUTTONS].page > 1) {
-            container.push(<li key='first-page' className='page-item'><a onClick={this.setPage.bind(this, 1)}>1</a></li>)
-            container.push(<li key='previous-page'><a aria-label='Previous' onClick={this.setPage.bind(this, this.state[BUTTONS].page - 1)}><span aria-hidden="true">&laquo;</span></a></li>)
+            container.push(<li key='first-page'><a className='page-link' onClick={this.setPage.bind(this, 1)}>1</a></li>)
+            container.push(<li key='previous-page'><a aria-label='Previous' className='page-link' onClick={this.setPage.bind(this, this.state[BUTTONS].page - 1)}><span aria-hidden="true">&laquo;</span></a></li>)
         }
         var i = 0
         while(i < extent) {
             container = this.getPage(container, i++)
         }
         if(this.state[BUTTONS].pages > i) {
-            container.push(<li key='next-page'><a aria-label='Next' onClick={this.setPage.bind(this, this.state[BUTTONS].page + i)}><span aria-hidden="true">&raquo;</span></a></li>)
+            container.push(<li key='next-page'><a aria-label='Next' className='page-link' onClick={this.setPage.bind(this, this.state[BUTTONS].page + i)}>
+                    <span aria-hidden="true">&raquo;</span></a></li>)
         }
         if(this.state[BUTTONS].pages > this.state[BUTTONS].page && this.state[BUTTONS].page > extent) {
-            container.push(<li key='last-page' className='page-item'><a onClick={this.setPage.bind(this, this.state[BUTTONS].pages)}>{this.state[BUTTONS].pages}</a></li>)
-            container.push(<li key='last-page'><a aria-label='Previous' onClick={this.setPage.bind(this, this.state[BUTTONS].pages)}><span aria-hidden="true">{this.state[BUTTONS].pages}</span></a></li>)
+            container.push(<li key='last-page'><a className='page-link' onClick={this.setPage.bind(this, this.state[BUTTONS].pages)}>{this.state[BUTTONS].pages}</a></li>)
+            container.push(<li key='last-page'><a aria-label='Previous' className='page-link' onClick={this.setPage.bind(this, this.state[BUTTONS].pages)}><span aria-hidden="true">{this.state[BUTTONS].pages}</span></a></li>)
         }
         return container
     }
@@ -435,7 +379,7 @@ export default class Grid extends Component {
         var container = []
         var actions = false
         for(var row in rows) {
-            actions = true
+            actions = true;
             if(undefined != this.state[COLUMNS][row] && true != this.state[COLUMNS][row].Attributes.unrender) {
                 if('object' == typeof(rows[row]) && null !== rows[row]) {
                     rows[row].Attributes.id = row
@@ -444,10 +388,14 @@ export default class Grid extends Component {
                     if(null == rows[row].Attributes.value) {
                         rows[row].Attributes.value = ''
                     }
-                    var element = React.createElement(rows[row].Tag, rows[row].Attributes, rows[row].Label)
+                    if('function' == typeof(this[rows[row].Method])) {
+                        var element = this[rows[row].Method](rows[row])
+                    } else {
+                        var element = React.createElement(rows[row].Tag, rows[row].Attributes, rows[row].Label)
+                    }
                     container.push(<td id={'grid-col-' + row} key={'grid-col-' + key + row} style={rows[row].Attributes.style}>{element}</td>)
                 } else {
-                    container.push(<td id={'grid-col-' + row} key={'grid-col-' + key + row}>{rows[row]}</td>)
+                    container.push(<td id={'grid-col-' + row} key={'grid-col-' + key + row}>{ReactHtmlParser(rows[row])}</td>)
                 }
             } else if('_actions' == row) {
                 var actions = []
@@ -466,13 +414,13 @@ export default class Grid extends Component {
         return container
     }
     addSelect(key) {
-        return <th className={'grid-col-' + key} key={key} style={this.state[COLUMNS][key].Attributes.style}>
+        return <div key={'elements-' + key}>
                 {this.addLabel(key)}
                 <select className={this.state[COLUMNS][key].Attributes.className}
                         id={key}
                         onChange={this.change.bind(this)}
                         >{this.getOptions(key)}>
-                </select></th>
+                </select></div>
     }
     addSummary() {
         var container = []
@@ -487,9 +435,8 @@ export default class Grid extends Component {
         return <tr id='impala-summary' key='impala-summary'>{container}</tr>
     }
     addText(key) {
-        return <th className={'grid-col-' + key} key={key} style={this.state[COLUMNS][key].Attributes.style}>
-            {this.addLabel(key)}
-            <input id={key}
+        return <div key={'element-' + key}>{this.addLabel(key)}
+                <input id={key}
                 className={this.state[COLUMNS][key].Attributes.className}
                 data={this.state[COLUMNS][key].Attributes.data}
                 onBlur={this.change.bind(this)}
@@ -498,8 +445,8 @@ export default class Grid extends Component {
                 style={this.state[COLUMNS][key].Attributes.style}
                 value={this.state[COLUMNS][key].Attributes.value}
                 type='text' />
-        </th>
-    }
+                </div>
+   }
     autocomplete(event) {
         var state = []
         state[COLUMNS] = this.state[COLUMNS]
@@ -518,13 +465,19 @@ export default class Grid extends Component {
             return this[closure].bind(this)
         }
     }
+    append(list, item) {
+        var n = 0
+        for(var key in list) { n++ }
+        list['_' + n] = item
+        return list
+    }
     change(event) {
         var state = []
         state[COLUMNS] = this.state[COLUMNS]
         if('click' == event.type) {
             state[COLUMNS][event.target.id].Attributes.autocomplete = ''
             state[COLUMNS][event.target.id].Attributes.position = 0
-            state[COLUMNS][event.target.id].Attributes.value.push(event.target.getAttribute('value'))
+            state[COLUMNS][event.target.id].Attributes.value = this.append(state[COLUMNS][event.target.id].Attributes.value, event.target.getAttribute('value'))
             if('_' == event.target.getAttribute('value')) {
                 state[COLUMNS][event.target.id].Attributes.value = []
             }
@@ -538,15 +491,13 @@ export default class Grid extends Component {
         this.setState(state)
     }
     chart(event) {
-        var response = JSON.parse(request('POST', this.state[BUTTONS].chart.Attributes.link, { json: {spice:this.getSpice(),row:this.state[ROWS][event.target.id] }}).getBody('utf8'))
-        console.log(response)
+        var response = JSON.parse(request('POST', this.state[BUTTONS].chart.link, { json: {spice:this.getSpice(),Row:this.state[ROWS][event.target.id] }}).getBody('utf8'))
         var state = []
-        if(undefined != response.chart && undefined == this.state[CHARTS][event.target.id]) {
-            state[CHART] = response.chart
+        if(undefined == this.state[CHARTS][event.target.id]) {
             state[CHARTS] = this.state[CHARTS]
-            state[CHARTS][event.target.id] = response.data
+            state[CHARTS][event.target.id] = response
             this.setState(state)
-        } else if(undefined != response.chart) {
+        } else {
             state[CHARTS] = this.state[CHARTS]
             delete state[CHARTS][event.target.id]
             this.setState(state)
@@ -580,6 +531,22 @@ export default class Grid extends Component {
             document.removeEventListener('keydown', this.keyDown.bind(this));
         }
     }
+    date(event, time) {
+        var date = time.format(event.target.format.toUpperCase())
+        var state = []
+        state[ROWS] = this.state[ROWS]
+        state[EDIT] = this.state[EDIT]
+        if(undefined != state[EDIT][event.target.name]) {
+            state[EDIT][event.target.name][event.target.id].Attributes.value = date
+        }
+        if('object' == typeof(state[ROWS][event.target.name][event.target.id])) {
+            state[ROWS][event.target.name][event.target.id].Attributes.value = date
+        } else {
+            state[ROWS][event.target.name][event.target.id] = date
+        }
+        state[ROWS][event.target.name] = JSON.parse(request('POST', this.state[BUTTONS].update, { json: {Key:event.target.id,Row:state[ROWS][event.target.name],Submit:false} }).getBody('utf8'))
+        this.setState(state)
+    }
     done(payload, key) {
         var response = JSON.parse(request('POST', this.state[BUTTONS].done.link, { json: payload }).getBody('utf8'))
         if(undefined != response.redirect) {
@@ -600,20 +567,21 @@ export default class Grid extends Component {
         this.setState(state)
     }
     edit(event) {
-        var data = {id:event.target.id,row:{}}
+        var data = {id:event.target.id,Row:{}}
         var rows = this.state[ROWS][event.target.id]
-        var state = []
         for(var row in rows) {
             if(null != rows[row] && null != rows[row].Label) {
-                data.row[row] = rows[row].Label
+                data.Row[row] = rows[row].Label
             } else if(null != rows[row] && null != rows[row].Attributes) {
-                data.row[row] = rows[row].Attributes.value
+                data.Row[row] = rows[row].Attributes.value
             } else {
-                data.row[row] = rows[row]
+                data.Row[row] = rows[row]
             }
         }
-        state[ROW] = this.state[ROW]
-        state[ROW].edit = JSON.parse(request('POST', this.state[BUTTONS].edit.Attributes.link, { json: data }).getBody('utf8'))
+        var state = []
+        state[ROW] = event.target.id
+        state[EDIT] = this.state[EDIT]
+        state[EDIT][event.target.id] = JSON.parse(request('POST', this.state[BUTTONS].edit.link, { json: data }).getBody('utf8'))
         this.setState(state)
     }
     filter() {
@@ -634,12 +602,12 @@ export default class Grid extends Component {
         return container
     }
     getPage(container, i) {
-        if(this.state[BUTTONS]['page'] + i <= this.state[BUTTONS]['pages']) {
-            var page = 'page' + (this.state[BUTTONS]['page'] + i)
+        if(this.state[BUTTONS].page + i <= this.state[BUTTONS].pages) {
+            var page = 'page' + (this.state[BUTTONS].page + i)
             if(0 == i) {
-                container.push(<li className='page-item active' key={page}><a onClick={this.setPage.bind(this, this.state[BUTTONS]['page'] + i)}>{this.state[BUTTONS]['page'] + i}</a></li>)
+                container.push(<li className='page-item active' key={page}><a className='page-link' onClick={this.setPage.bind(this, this.state[BUTTONS].page + i)}>{this.state[BUTTONS].page + i}</a></li>)
             } else {
-                container.push(<li className='page-item' key={page}><a onClick={this.setPage.bind(this, this.state[BUTTONS]['page'] + i)}>{this.state[BUTTONS]['page'] + i}</a></li>)
+                container.push(<li className='page-item' key={page}><a className='page-link' onClick={this.setPage.bind(this, this.state[BUTTONS].page + i)}>{this.state[BUTTONS].page + i}</a></li>)
             }
 
         }
@@ -667,9 +635,9 @@ export default class Grid extends Component {
         var url = this.state[BUTTONS].link + JSON.stringify(spice) +  '&impala-page=' + this.state[BUTTONS].page  + '&impala-sort=' + JSON.stringify(sort)
         window.history.replaceState('', 'title', url)
         var data = new Object()
-        data.filters = spice
-        data.sort = sort
-        data.offset = this.state[BUTTONS].page
+        data.Filters = spice
+        data.Sort = sort
+        data.Offset = this.state[BUTTONS].page
         return data
     }
     hide() {
@@ -689,27 +657,13 @@ export default class Grid extends Component {
             this.setState(state)
         }
     }
-    insert(event) {
-        var state = []
-        state[ROWS] = this.state[ROWS]
-        state[VALIDATORS] = JSON.parse(request('POST', this.state[BUTTONS].validate, {json: {row:state[ROWS][event.target.name]}}).getBody('utf8'))
-        for (var validator in state[VALIDATORS]) {
-            this.setState(state)
-            return
-        }
-        state[ROWS][event.target.name] = JSON.parse(request('POST', this.state[BUTTONS].add.Attributes.link, { json: {row:this.state[ROWS][event.target.name]} }).getBody('utf8'))
-        state[ROW] = this.state[ROW]
-        state[ROW].add._message.Attributes.style = {display:'block'}
-        this.setState(state)
-        this.submit()
-    }
     key(event) {
         if(38 == event.keyCode || 40 == event.keyCode || 13 == event.keyCode) {
             var state = []
             state[COLUMNS] = this.state[COLUMNS]
             if(13 == event.keyCode && '_' != event.target.alt) {
                 state[COLUMNS][event.target.id].Attributes.autocomplete = ''
-                state[COLUMNS][event.target.id].Attributes.value.push(event.target.alt)
+                state[COLUMNS][event.target.id].Attributes.value = this.append(state[COLUMNS][event.target.id].Attributes.value, event.target.alt)
             } else if(event.target.name > this.state[COLUMNS][event.target.id].Attributes.position && 40 == event.keyCode) {
                 state[COLUMNS][event.target.id].Attributes.position++
                 this.setState(state)
@@ -738,7 +692,7 @@ export default class Grid extends Component {
         }
     }
     message(message) {
-        document.getElementById('impala-message-modal-body').insertAdjacentHTML('afterbegin', '<p>' + message + '</p>')
+        document.getElementById('impala-edit-modal-body').insertAdjacentHTML('afterbegin', '<p>' + message + '</p>')
         $('#trigger-message').trigger('click')
     }
     paginate() {
@@ -747,14 +701,15 @@ export default class Grid extends Component {
         var state = []
         state[BUTTONS] = this.state[BUTTONS]
         state[BUTTONS].pages = response
+        state[CHARTS] = []
         this.setState(state)
         return data
     }
     prepare(event) {
         var data = this.getSpice()
-        data.offset = 0
+        data.Offset = 0
         var response = JSON.parse(request('POST', this.state[BUTTONS][event.target.id].link, { json: data }).getBody('utf8'))
-        if(undefined == response.message) {
+        if(undefined == response.Message) {
             var state = []
             var element = this.state[BUTTONS][event.target.id]
             element.className = 'btn btn-success disabled'
@@ -762,7 +717,7 @@ export default class Grid extends Component {
             this.setState(state)
             this.run(response, 'export')
         } else {
-            this.message(response.message)
+            this.message(response.Message)
             this.forceUpdate()
         }
     }
@@ -771,8 +726,9 @@ export default class Grid extends Component {
         data.key = event.target.id
         data.columns = this.state[COLUMNS]
         data.rows = this.state[ROWS]
+        delete data.rows[-1]
         var response = JSON.parse(request('POST', this.state[BUTTONS].push, { json: data }).getBody('utf8'))
-        if(undefined == response.message) {
+        if(undefined == response.Message) {
             var state = new Object()
             state[ROWS] = response.rows
             if(this.state[BUTTONS].pages > 2) {
@@ -781,20 +737,19 @@ export default class Grid extends Component {
             }
             this.setState(state)
         } else {
-            this.message(response.message)
+            this.message(response.Message)
         }
         this.forceUpdate()
     }
     render() {
         var dialogs = []
-        if(undefined == this.state[BUTTONS].add.length) {
+        if(undefined == this.state[BUTTONS].edit.length) {
             dialogs.push(<a className='btn btn-success'
-                             data-link={this.state[BUTTONS].add.Attributes.link}
-                             data-target={'#impala-add'}
+                             data-target={'#impala-edit'}
                              data-toggle='modal'
-                             id={this.state[BUTTONS].add.Attributes.id}
-                             key={'dialog-add'}
-                             onClick={this.bind(this.state[BUTTONS].add.Attributes.onClick)}
+                             id='-1'
+                             key='dialog-add'
+                             onClick={this.edit.bind(this)}
                              style={{marginRight: '10px'}}
                              title='add'
                              type='button'
@@ -821,10 +776,9 @@ export default class Grid extends Component {
                     <tr className='grid-columns'>{this.addColumns()}</tr>
                 </thead>
                 <tbody>{this.addBody()}</tbody>
-                <tbody className='chart' style={{backgroundImage:'none',position:'absolute',top:'0px'}}>{this.addGraphs()}</tbody>
             </table>
             <ul key='down-paginator' id='down-paginator' className='pagination'>{this.addPaginator()}</ul>
-            {this.addDialog('add')}{this.addDialog('edit')}
+            {this.addDialog()}
         </div>
     }
     reset() {
@@ -863,19 +817,23 @@ export default class Grid extends Component {
         if(false === confirm(this.state[BUTTONS].proceed)) {
             return
         }
-        this.signal({target:{id:event.target.id,href:this.state[BUTTONS].remove.Attributes.link},preventDefault(){}})
+        JSON.parse(request('POST', this.state[BUTTONS].remove.link, { json: {spice:this.getSpice(),Row:this.state[ROWS][event.target.id] }}).getBody('utf8'))
+        var state = []
+        state[ROWS] = this.state[ROWS]
+        delete state[ROWS][event.target.id]
+        this.setState(state)
     }
     run(payload, key) {
-        if(parseInt(payload.stop) > parseInt(payload.offset)) {
+        if(parseInt(payload.Stop) > parseInt(payload.Offset)) {
             axios.post(this.state[BUTTONS].run, payload).then(response => {
                 var buttons = this.state[BUTTONS]
-                buttons[key].width = payload.offset / (payload.stop / 100)
+                buttons[key].width = payload.Offset / (payload.Stop / 100)
                 var state = []
                 state[BUTTONS] = buttons
-                if('service' == response.data.status && 'object' == typeof(response.data.row) && SIZE > payload.offset) {
+                if('facade' == response.data.Status && 'object' == typeof(response.data.Row) && SIZE > payload.Offset) {
                     state[ROWS] = this.state[ROWS]
-                    for(var row in response.data.row) {
-                        state[ROWS][parseInt(row) + parseInt(payload.offset)] = response.data.row[row]
+                    for(var row in response.data.Row) {
+                        state[ROWS][parseInt(payload.Offset)][row] = response.data.Row[row]
                     }
                 }
                 this.setState(state)
@@ -919,22 +877,7 @@ export default class Grid extends Component {
             }
             state[BUTTONS] = buttons
         }
-        console.log(state[COLUMNS].id)
         this.setState(state)
-    }
-    signal(event) {
-        event.preventDefault()
-        var response = JSON.parse(request('POST', event.target.href, { json: {spice:this.getSpice(),row:this.state[ROWS][event.target.id] }}).getBody('utf8'))
-        var state = []
-        if(true === response.remove) {
-            var element = this.state[ROWS]
-            delete element[event.target.id]
-            state[ROWS] = element
-            this.setState(state)
-        } else if(true === response.submit) {
-            this.submit()
-        }
-        this.forceUpdate()
     }
     show(event) {
         var state = []
@@ -1006,32 +949,48 @@ export default class Grid extends Component {
         }
         this.setState(state)
     }
-    date(event, time) {
+    save(event) {
         var state = []
-        state[ROW] = this.state[ROW]
+        state[VALIDATORS] = JSON.parse(request('POST', this.state[BUTTONS].validate, {json: {Row:this.state[EDIT][event.target.name]}}).getBody('utf8'))
+        for (var validator in state[VALIDATORS]) {
+            this.setState(state)
+            return
+        }
+        state[EDIT] = this.state[EDIT]
         state[ROWS] = this.state[ROWS]
-        state[ROW][event.target.key][event.target.id].Attributes.value = time.format(state[ROW][event.target.key][event.target.id].Attributes.format.toUpperCase())
-        state[ROWS][event.target.name][event.target.id] = state[ROW][event.target.key][event.target.id].Attributes.value
+        var edit = state[EDIT][event.target.name]
+        for(var row in edit) {
+            if(undefined != edit[row].Attributes.data && undefined != edit[row].Attributes.value && 'object' == typeof(state[ROWS][event.target.name][row])) {
+                state[ROWS][event.target.name].value = edit[row].Attributes.data[edit[row].Attributes.value]
+            } else {
+                state[ROWS][event.target.name][row] = edit[row].Attributes.value
+            }
+        }
+        var rows = JSON.parse(request('POST', this.state[BUTTONS].update, { json: {Row:state[ROWS][event.target.name],Submit:true}}).getBody('utf8'))
+        if(event.target.name < 0) {
+            state[NEW] = this.state[NEW]
+            state[NEW][event.target.name] = rows
+        } else {
+            state[ROWS][event.target.name] = rows
+        }
+        state[EDIT][event.target.name]._message.Attributes.style = {display:'block'}
         this.setState(state)
+        this.edit({target:{id:event.target.name}})
     }
     type(event) {
         var state = []
-        state[ROW] = this.state[ROW]
         state[ROWS] = this.state[ROWS]
-        var id = 'edit'
-        if(event.target.name < 0) {
-            id = 'add'
-        }
-        state[ROW][id][event.target.id].Attributes.value = event.target.value
+        state[EDIT] = this.state[EDIT]
+        state[EDIT][event.target.name][event.target.id].Attributes.value = event.target.value
         if('checkbox' == event.target.type && 1 == event.target.value) {
-            state[ROW][id][event.target.id].Attributes.value = 0
-            delete state[ROW][id][event.target.id].Attributes.checked
+            state[EDIT][event.target.name][event.target.id].Attributes.value = 0
+            delete state[EDIT][event.target.name][event.target.id].Attributes.checked
             if(undefined != state[ROWS][event.target.name]) {
                 state[ROWS][event.target.name][event.target.id] = 0
             }
         } else if('checkbox' == event.target.type && 0 == event.target.value) {
-            state[ROW][id][event.target.id].Attributes.value = 1
-            state[ROW][id][event.target.id].Attributes.checked = 'checked'
+            state[EDIT][event.target.name][event.target.id].Attributes.value = 1
+            state[EDIT][event.target.name][event.target.id].Attributes.checked = 'checked'
             if(undefined != state[ROWS][event.target.name]) {
                 state[ROWS][event.target.name][event.target.id] = 1
             }
@@ -1044,17 +1003,9 @@ export default class Grid extends Component {
         this.setState(state)
     }
     update(event) {
-        var data = {id:event.target.id,row:{},submit:false}
         var state = []
         state[ROWS] = this.state[ROWS]
-        if(null == state[ROWS][event.target.name][event.target.id]) {
-            state[VALIDATORS] = JSON.parse(request('POST', this.state[BUTTONS].validate, {json: {row:state[ROWS][event.target.name]}}).getBody('utf8'))
-            for (var validator in state[VALIDATORS]) {
-                this.setState(state)
-                return
-            }
-            data.submit = true
-        } else if('checkbox' == event.target.type && 1 == event.target.value) {
+        if('checkbox' == event.target.type && 1 == event.target.value) {
             delete state[ROWS][event.target.name][event.target.id].Attributes.checked
             state[ROWS][event.target.name][event.target.id].Attributes.value = 0
         } else if('checkbox' == event.target.type && 0 == event.target.value) {
@@ -1063,25 +1014,12 @@ export default class Grid extends Component {
         } else {
             state[ROWS][event.target.name][event.target.id].Attributes.value = event.target.value
         }
-        data.row = state[ROWS][event.target.name]
-        for(var row in this.state[ROW].edit) {
-            if(undefined != this.state[ROW].edit[row].Attributes.value) {
-                data.row[row] = this.state[ROW].edit[row].Attributes.value
-            }
-        }
-        state[ROWS][event.target.name] = JSON.parse(request('POST', this.state[BUTTONS].update, { json: data }).getBody('utf8'))
+        state[ROWS][event.target.name] = JSON.parse(request('POST', this.state[BUTTONS].update, { json: {Key:event.target.id,Row:state[ROWS][event.target.name],Submit:false}}).getBody('utf8'))
         this.setState(state)
-        if(true == data.submit) {
-            this.edit({target:{id:event.target.name}})
-            state = []
-            state[ROW] = this.state[ROW]
-            state[ROW].edit._message.Attributes.style = {display:'block'}
-            this.setState(state)
-        }
     }
 
 }
-var element = document.getElementById('grid')
+var element = document.getElementById(ID)
 if(null != element) {
-    ReactDOM.render(<Grid />, document.getElementById('grid')).start()
+    ReactDOM.render(<Grid />, document.getElementById(ID)).start()
 }
