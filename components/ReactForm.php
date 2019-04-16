@@ -12,9 +12,6 @@ use Nette\Application\IPresenter,
 /** @author Lubomir Andrisek */
 class ReactForm extends Control implements IReactFormFactory {
 
-    /** @var string */
-    private $css;
-
     /** @var array */
     private $compulsory = [];
 
@@ -34,8 +31,7 @@ class ReactForm extends Control implements IReactFormFactory {
     /** @var string */
     protected const EMAIL = 'isEmail';
 
-    public function __construct(string $css, string $js, IRequest $request) {
-        $this->css = $css;
+    public function __construct(string $js, IRequest $request) {
         $this->js = $js;
         $this->request = $request;
         $this->monitor(IPresenter::class, [$this, 'attached']);
@@ -230,7 +226,6 @@ class ReactForm extends Control implements IReactFormFactory {
     }
 
     public function render(...$args): void {
-        $this->template->css = $this->getPresenter()->template->basePath . '/' . $this->css;
         $this->template->component = $this->getName();
         $this->template->data = json_encode(['row' => $this->data, 'validators' => []]);
         $this->template->links = json_encode($this->addHandlers(['crop', 'delete', 'done', 'export', 'import', 'move', 'prepare', 'put', 'resize', 'run', 'save', 'submit', 'validate']));

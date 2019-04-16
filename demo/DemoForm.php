@@ -13,8 +13,8 @@ final class DemoForm extends ReactForm implements IDemoFormFactory {
     /** @var ITranslator */
     private $translatorRepository;
 
-    public function __construct(ITranslator $translatorRepository, IRequest $request) {
-        parent::__construct($request);
+    public function __construct(string $js, IRequest $request, ITranslator $translatorRepository) {
+        parent::__construct($js, $request);
         $this->translatorRepository = $translatorRepository;
     }
 

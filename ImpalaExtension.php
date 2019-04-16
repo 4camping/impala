@@ -9,8 +9,7 @@ use Exception,
 /** @author Lubomir Andrisek */
 final class ImpalaExtension extends CompilerExtension {
 
-    private $defaults = ['assets' => 'assets/components/impala',
-        'css' => 'assets/components/impala/css',
+    private $defaults = ['assets' => 'node_modules/npm-impala',
         'feeds' => 'feeds',
         'format' => ['date' => ['build' => 'd.m.Y', 'query'=> 'Y-m-d', 'select' => 'GET_FORMAT(DATE,"EUR")'],
                     'time' => ['build' => 'Y-m-d H:i:s', 'query' => 'Y-m-d', 'select' => 'GET_FORMAT(DATE,"EUR")']],
@@ -49,7 +48,7 @@ final class ImpalaExtension extends CompilerExtension {
         $builder->addDefinition($this->prefix('grid'))
                 ->setFactory('Impala\Grid', [$parameters['appDir'], $manifest['Grid.js'], $parameters['impala']]);
         $builder->addDefinition($this->prefix('filterForm'))
-                ->setFactory('Impala\FilterForm', [$parameters['impala']['css'], '']);
+                ->setFactory('Impala\FilterForm', ['']);
         $builder->addDefinition($this->prefix('helpRepository'))
                 ->setFactory('Impala\HelpRepository', [$parameters['impala']['help']]);
         $builder->addDefinition($this->prefix('impala'))
@@ -59,7 +58,7 @@ final class ImpalaExtension extends CompilerExtension {
         $builder->addDefinition($this->prefix('mockFacade'))
                 ->setFactory('Impala\MockFacade');
         $builder->addDefinition($this->prefix('rowForm'))
-                ->setFactory('Impala\RowForm', [$parameters['impala']['css'], $manifest['RowForm.js']]);
+                ->setFactory('Impala\RowForm', [$manifest['RowForm.js']]);
     }
 
     public function beforeCompile() {
