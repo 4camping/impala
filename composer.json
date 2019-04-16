@@ -12,9 +12,7 @@
 		}
 	],
 	"autoload": {
-		"psr-4": {
-			"impala": "impala"
-		}
+		"classmap": ["/"]
 	},
 	"require": {
 		"nette/nette": "3.0.0",
