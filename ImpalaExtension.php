@@ -36,7 +36,7 @@ final class ImpalaExtension extends CompilerExtension {
     public function loadConfiguration() {
         $builder = $this->getContainerBuilder();
         $parameters = $this->getConfiguration($builder->parameters);
-        $manifest = (array) json_decode(file_get_contents($parameters['wwwDir'] . '/' . $parameters['impala']['assets'] . '/js/manifest.json'));
+        $manifest = (array) json_decode(file_get_contents($parameters['wwwDir'] . '/' . $parameters['impala']['assets'] . '/manifest.json'));
         $builder->addDefinition($this->prefix('builder'))
                 ->setFactory('Impala\Builder', [$parameters['impala']]);
         $builder->addDefinition($this->prefix('impalaExtension'))
