@@ -2,8 +2,8 @@ var webpack = require('webpack');
 var path = require('path');
 var ManifestPlugin = require("webpack-manifest-plugin");
 var WebpackMd5HashPlugin = require('webpack-md5-hash');
-var APP_DIR = path.resolve(__dirname, '../components');
-var PUBLIC_DIR = 'assets/components/impala/js';
+var APP_DIR = path.resolve(__dirname, './components');
+var PUBLIC_DIR = './node_modules/npm-impala';
 
 module.exports = {
     entry: { Grid: APP_DIR + '/Grid.jsx',

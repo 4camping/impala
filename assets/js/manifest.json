@@ -1,5 +1,5 @@
 {
-  "Grid.js": "assets/components/masala/js/Grid.f4989a5ca82d40acca9a.js",
-  "ImportForm.js": "assets/components/masala/js/ImportForm.41f206d9818482483891.js",
-  "RowForm.js": "assets/components/masala/js/RowForm.ec9252ac68a4ebc9657a.js"
+  "Grid.js": "./node_modules/npm-impala/Grid.95a3aef4a3d0ccf5bdb3.js",
+  "ImportForm.js": "./node_modules/npm-impala/ImportForm.25978808d5513fd6be6f.js",
+  "RowForm.js": "./node_modules/npm-impala/RowForm.0e892e9954b70f423649.js"
 }
