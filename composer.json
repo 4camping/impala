@@ -1,5 +1,5 @@
 {
-	"name": "landrisek/impala",
+	"name": "4camping/impala",
 	"description": "React datagrid for sql.",
 	"keywords": ["grid", "react", "nette"],
 	"license": "BSD-3-Clause",
