@@ -17,6 +17,6 @@
 	"require": {
 		"nette/nette": "3.0.0",
 		"php": ">= 7.1.0",
-		"PHPOffice/PHPExcel": "v1.8.1."
+		"phpoffice/phpexcel": "v1.8.1."
 	}
 }
